@@ -1,0 +1,16 @@
+# Old Adobe Portfolio URLs → new /work/<slug> URLs (301 keeps SEO).
+# Slugs are unchanged; only the /work/ prefix is new. See docs/domain.md#urls
+/xibarri-uxui-case-study /work/xibarri-uxui-case-study 301
+/oqtima-portal-uxui-design /work/oqtima-portal-uxui-design 301
+/tradeneto /work/tradeneto 301
+/makfero /work/makfero 301
+/oquro-mascot-design /work/oquro-mascot-design 301
+/exwalt-branding /work/exwalt-branding 301
+/la-union-femenina-manises-football-club-rebranding /work/la-union-femenina-manises-football-club-rebranding 301
+/topspin-2k25-illustration /work/topspin-2k25-illustration 301
+/mb-protect-print /work/mb-protect-print 301
+/xxxiii-diada-castellers-de-sants-poster-design /work/xxxiii-diada-castellers-de-sants-poster-design 301
+/personal-branding-fadi-pierre-saati /work/personal-branding-fadi-pierre-saati 301
+/beemob-summer-campaign /work/beemob-summer-campaign 301
+/choco-charlie-cover-art /work/choco-charlie-cover-art 301
+/pepsico-ulearn-ugrow-presentation-design /work/pepsico-ulearn-ugrow-presentation-design 301

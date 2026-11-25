@@ -1,0 +1,92 @@
+# Runs on every PR into master: secret scan, lint, typecheck, build, link check,
+# then uploads a Cloudflare preview version so the PR can be tested manually.
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            git /repo --redact --verbose --log-opts="origin/${{ github.base_ref }}..HEAD"
+
+  build:
+    name: Lint, check, build, links
+    runs-on: ubuntu-latest
+    needs: secrets
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install --no-frozen-lockfile; fi
+      - run: pnpm lint
+      - run: pnpm check
+      - run: pnpm build
+      - run: pnpm links
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
+
+  preview:
+    name: Cloudflare preview
+    runs-on: ubuntu-latest
+    needs: build
+    # Fork PRs have no access to secrets.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install --no-frozen-lockfile; fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Upload preview version
+        id: wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload --preview-alias pr-${{ github.event.pull_request.number }}
+      - name: Comment preview URL on the PR
+        uses: actions/github-script@v7
+        env:
+          OUTPUT: ${{ steps.wrangler.outputs.command-output }}
+        with:
+          script: |
+            const match = (process.env.OUTPUT || '').match(/https:\/\/pr-[^\s]+\.workers\.dev/);
+            const url = match ? match[0] : '(preview URL not found — check the job log)';
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: `🔍 **Preview:** ${url}\n\nTest it manually before merging (see CLAUDE.md → Manual check).`,
+            });
