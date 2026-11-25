@@ -1,0 +1,7 @@
+# gitleaks config: default rules + allow the example files that only contain empty keys.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example env files contain variable names only"
+paths = ['''\.env\.example$''', '''\.dev\.vars\.example$''']
